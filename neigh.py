@@ -85,6 +85,7 @@ def find_neighbors(active_horse_name, data, pivot, combined_embeddings, known_em
         # Retrieve details for the neighbor
         horse_name = neighbor_data['horse_name']
         url = f"https://photofinish.live/horses/{neighbor_data['horse_id']}"
+        grade = neighbor_data.get('grade', 'N/A')
         start = neighbor_data.get('start', 'N/A')
         speed = neighbor_data.get('speed', 'N/A')
         stamina = neighbor_data.get('stamina', 'N/A')
@@ -98,6 +99,7 @@ def find_neighbors(active_horse_name, data, pivot, combined_embeddings, known_em
         condition_star = neighbor_data.get('condition_weight_norm', 0) * 3
 
         st.markdown(f"**{rank}. Name: {horse_name}**")
+        st.markdown(f"   - **Grade**: {grade}")
         st.markdown(f"   - **Start**: {start}, **Speed**: {speed}, **Stamina**: {stamina}")
         st.markdown(f"   - **Finish**: {finish}, **Heart**: {heart}, **Temper**: {temper}")
         st.markdown(f"   - **Surface Star**: {surface_star:.2f}, **Direction Star**: {direction_star:.2f}, **Condition Star**: {condition_star:.2f}")
@@ -121,7 +123,9 @@ def main():
     if horse_name:
         find_neighbors(horse_name, data, pivot, combined_embeddings, known_embeddings)
 
-
+    # Reset button
+    if st.button("Reset"):
+        st.experimental_rerun()
 
 
 # Run the app
