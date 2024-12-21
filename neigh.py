@@ -30,10 +30,7 @@ def load_processed_data():
         known_embeddings = pd.read_pickle("known_embeddings.pkl").values
         pivot = pd.read_pickle("pivot.pkl")
 
-        # Use pivot.index as horse names
-        known_horse_names = pivot.index.tolist()  # List of horse names
-
-        return data, combined_embeddings, known_embeddings, known_horse_names, pivot
+        return data, combined_embeddings, known_embeddings, pivot
 
     except FileNotFoundError as e:
         st.error(f"Error loading data: {e}")
@@ -117,12 +114,11 @@ def main():
     horse_name = st.text_input("Enter your horse name:")
 
     # Load preprocessed data
-    data, combined_embeddings, known_embeddings, known_horse_names, pivot = load_processed_data()
+    data, combined_embeddings, known_embeddings, pivot = load_processed_data()
 
     # Find neighbors if a horse name is entered
     if horse_name:
         find_neighbors(horse_name, data, pivot, combined_embeddings, known_embeddings)
-
 
 
 # Run the app
