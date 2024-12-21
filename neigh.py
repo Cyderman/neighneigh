@@ -1,40 +1,49 @@
-import os
-import zipfile
+import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-import streamlit as st
+import zipfile
+import os
 
-# Cache the data loading process
+# Load processed data
 @st.cache_data
 def load_processed_data():
-    # Ensure data_processed.zip is extracted
-    if not os.path.exists("processed_data.pkl"):
-        if not os.path.exists("data_processed.zip"):
-            raise FileNotFoundError("data_processed.zip not found. Please upload or add it to the directory.")
-        with zipfile.ZipFile("data_processed.zip", "r") as zip_ref:
-            zip_ref.extractall()
+    try:
+        # Ensure all required files are present
+        required_files = [
+            "processed_data.zip",
+            "combined_embeddings.pkl",
+            "known_embeddings.pkl",
+            "pivot.pkl",
+        ]
+        for file in required_files:
+            if not os.path.exists(file):
+                raise FileNotFoundError(f"Required file {file} not found!")
 
-    # Load processed_data.pkl
-    data = pd.read_pickle("processed_data.pkl")
+        # Extract and load data from the ZIP file
+        with zipfile.ZipFile("processed_data.zip", "r") as z:
+            z.extractall()
 
-    # Load other required .pkl files directly
-    combined_embeddings = pd.read_pickle("combined_embeddings.pkl").values
-    known_embeddings = pd.read_pickle("known_embeddings.pkl").values
-    known_horse_names = pd.read_pickle("known_horse_names.pkl")
-    pivot = pd.read_pickle("pivot.pkl")
+        # Load preprocessed data
+        data = pd.read_pickle("processed_data.pkl")
+        combined_embeddings = pd.read_pickle("combined_embeddings.pkl").values
+        known_embeddings = pd.read_pickle("known_embeddings.pkl").values
+        pivot = pd.read_pickle("pivot.pkl")
 
-    # If `known_horse_names.pkl` is a DataFrame or Series, convert it to a list
-    if isinstance(known_horse_names, pd.DataFrame) or isinstance(known_horse_names, pd.Series):
-        known_horse_names = known_horse_names.squeeze().tolist()
+        # Use pivot.index as horse names
+        known_horse_names = pivot.index.tolist()  # List of horse names
 
-    return data, combined_embeddings, known_embeddings, known_horse_names, pivot
+        return data, combined_embeddings, known_embeddings, known_horse_names, pivot
+
+    except FileNotFoundError as e:
+        st.error(f"Error loading data: {e}")
+        st.stop()
 
 
-# Function to find the nearest neighbors for a given horse
+# Find nearest neighbors
 def find_neighbors(active_horse_name, data, pivot, combined_embeddings, known_embeddings):
     if active_horse_name not in pivot.index:
-        st.warning(f"Horse '{active_horse_name}' not found in the data.")
+        st.error(f"Horse '{active_horse_name}' not found in the database.")
         return
 
     # Get the archetype of the active horse
@@ -60,7 +69,8 @@ def find_neighbors(active_horse_name, data, pivot, combined_embeddings, known_em
     # Find nearest neighbors
     distances, relative_indices = archetype_nn_model.kneighbors(active_vector, n_neighbors=5)
 
-    st.write(f"### Nearest neighbors for '{active_horse_name}' within archetype '{active_archetype}':")
+    # Display nearest neighbors
+    st.write(f"Nearest neighbors for active horse **'{active_horse_name}'** within archetype **'{active_archetype}'**:")
 
     # Use the mapping to get the original indices
     for rank, (relative_idx, dist) in enumerate(zip(relative_indices[0], distances[0]), start=1):
@@ -87,35 +97,35 @@ def find_neighbors(active_horse_name, data, pivot, combined_embeddings, known_em
         direction_star = neighbor_data.get('direction_weight_norm', 0) * 3
         condition_star = neighbor_data.get('condition_weight_norm', 0) * 3
 
-        st.write(f"#### {rank}. {horse_name}")
-        st.write(f"- **Start**: {start}, **Speed**: {speed}, **Stamina**: {stamina}")
-        st.write(f"- **Finish**: {finish}, **Heart**: {heart}, **Temper**: {temper}")
-        st.write(f"- **Surface Star**: {surface_star:.2f}, **Direction Star**: {direction_star:.2f}, **Condition Star**: {condition_star:.2f}")
-        st.write(f"- **Distance (similarity)**: {dist:.3f}")
-        st.markdown(f"[View Horse Profile]({url})")
+        st.markdown(f"**{rank}. Name: {horse_name}**")
+        st.markdown(f"   - **Start**: {start}, **Speed**: {speed}, **Stamina**: {stamina}")
+        st.markdown(f"   - **Finish**: {finish}, **Heart**: {heart}, **Temper**: {temper}")
+        st.markdown(f"   - **Surface Star**: {surface_star:.2f}, **Direction Star**: {direction_star:.2f}, **Condition Star**: {condition_star:.2f}")
+        st.markdown(f"   - **Distance (similarity)**: {dist:.3f}")
+        st.markdown(f"   - [View Horse Profile]({url})")
+        st.markdown("---")
 
 
-# Main Streamlit app logic
+# Main function
 def main():
     st.title("Next Nearest Horse Neigh-bour")
+    st.markdown("Enter a horse name to find its closest matches based on performance and preferences.")
 
-    # Load processed data
-    try:
-        data, combined_embeddings, known_embeddings, known_horse_names, pivot = load_processed_data()
-    except FileNotFoundError as e:
-        st.error(f"Error loading data: {e}")
-        return
+    # Input field for horse name
+    horse_name = st.text_input("Enter your horse name:")
 
-    # Input for horse name
-    active_horse_name = st.text_input("Enter your horse name:")
+    # Load preprocessed data
+    data, combined_embeddings, known_embeddings, known_horse_names, pivot = load_processed_data()
 
-    if active_horse_name:
-        find_neighbors(active_horse_name, data, pivot, combined_embeddings, known_embeddings)
+    # Find neighbors if a horse name is entered
+    if horse_name:
+        find_neighbors(horse_name, data, pivot, combined_embeddings, known_embeddings)
 
     # Reset button
     if st.button("Reset"):
         st.experimental_rerun()
 
 
+# Run the app
 if __name__ == "__main__":
     main()
