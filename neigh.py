@@ -123,9 +123,6 @@ def main():
     if horse_name:
         find_neighbors(horse_name, data, pivot, combined_embeddings, known_embeddings)
 
-    # Reset button
-    if st.button("Reset"):
-        st.experimental_rerun()
 
 
 # Run the app
